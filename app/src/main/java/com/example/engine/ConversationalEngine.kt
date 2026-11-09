@@ -51,6 +51,17 @@ object ConversationalEngine {
         return null
     }
 
+    /**
+     * true فقط للأسئلة التي يجيب عنها الجهاز بدقة وفورية (الوقت، التاريخ، العمليات الحسابية).
+     * كل ما عداها (محادثة، أسئلة معرفة، نصائح...) يذهب للمساعد الذكي بدل الردود الجاهزة.
+     */
+    fun isInstantFactual(rawText: String, normalized: String): Boolean {
+        val lower = normalized.trim()
+        return checkTime(rawText, lower) != null ||
+            checkDate(rawText, lower) != null ||
+            checkCalculation(rawText, lower) != null
+    }
+
     private fun checkTime(raw: String, lower: String): IntentResult? {
         val timeKeywords = listOf(
             "كم الساعه", "الساعه كم", "كم الوقت", "الوقت الان", "ايش الوقت", "شو الوقت",

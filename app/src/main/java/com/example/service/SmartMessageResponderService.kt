@@ -54,6 +54,56 @@ class SmartMessageResponderService : NotificationListenerService(), TextToSpeech
             return enabledListeners != null && enabledListeners.contains(myComponent)
         }
 
+        data class NotificationItem(
+            val appName: String,
+            val title: String,
+            val text: String,
+            val postTime: Long
+        )
+
+        /**
+         * يقرأ الإشعارات الظاهرة الآن في شريط الإشعارات (وليس سجلاً قديماً: أندرويد لا يحتفظ بالمحذوفة).
+         * يتطلب منح "الوصول إلى الإشعارات" للتطبيق.
+         * يخفي أرقام رموز التحقق تلقائياً.
+         */
+        fun readActiveNotifications(
+            context: Context,
+            limit: Int = 5,
+            appFilter: String = ""
+        ): Pair<Boolean, List<NotificationItem>> {
+            val service = instance ?: return Pair(false, emptyList())
+            return try {
+                val pm = context.packageManager
+                val codeWords = Regex("(رمز|كود|code|otp|verification|تحقق|password|كلمة المرور)", RegexOption.IGNORE_CASE)
+                val items = service.activeNotifications
+                    .filter { it.packageName != context.packageName }
+                    .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+                    .filter { it.notification.flags and Notification.FLAG_ONGOING_EVENT == 0 }
+                    .sortedByDescending { it.postTime }
+                    .mapNotNull { sbn ->
+                        val extras = sbn.notification.extras
+                        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().trim()
+                        var text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+                            ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().trim()
+                        if (title.isBlank() && text.isBlank()) return@mapNotNull null
+                        if (codeWords.containsMatchIn(title + " " + text)) {
+                            text = text.replace(Regex("\\d{4,8}"), "[مخفي]")
+                        }
+                        val label = try {
+                            pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0)).toString()
+                        } catch (_: Exception) {
+                            sbn.packageName
+                        }
+                        NotificationItem(label, title, text.take(160), sbn.postTime)
+                    }
+                    .filter { appFilter.isBlank() || it.appName.contains(appFilter, ignoreCase = true) }
+                    .take(limit.coerceIn(1, 10))
+                Pair(true, items)
+            } catch (_: Exception) {
+                Pair(false, emptyList())
+            }
+        }
+
         fun sendReply(context: Context, replyText: String): Pair<Boolean, String> {
             val session = activeSession
             if (session == null) {

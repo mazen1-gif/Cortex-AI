@@ -131,6 +131,24 @@ fun CyberpunkAssistantApp(
         }
     }
 
+    // Location Permission Request (runtime) - يُطلب فقط عند الحاجة لتحديد الموقع
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        viewModel.onLocationPermissionResult(result.values.any { it })
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.locationPermissionRequest.collect {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
     // System Voice Recognition Dialog Launcher
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

@@ -22,6 +22,25 @@ import android.widget.Toast
 import com.example.model.DeviceFile
 import com.example.model.FileCategory
 import com.example.model.InstalledApp
+import android.Manifest
+import android.annotation.SuppressLint
+import android.location.Address
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
+import kotlin.math.roundToInt
 import java.io.File
 import java.util.Locale
 
@@ -156,6 +175,26 @@ class SystemCommander(private val context: Context) {
             }
         }
         return aliases.distinct()
+    }
+
+    /** قائمة حقيقية بالتطبيقات المثبتة القابلة للفتح، مع إمكانية التصفية بالاسم. */
+    fun listInstalledAppNames(filter: String = ""): Pair<Boolean, String> {
+        return try {
+            val apps = getInstalledApps()
+            if (apps.isEmpty()) return Pair(false, "تعذر قراءة قائمة التطبيقات من النظام.")
+            val f = filter.trim()
+            val matched = if (f.isBlank()) apps else apps.filter { cleanAppQuery(it.appName).contains(cleanAppQuery(f), ignoreCase = true) }
+            val userApps = matched.filter { !it.isSystemApp }.map { it.appName }.sorted()
+            val systemApps = matched.filter { it.isSystemApp }.map { it.appName }.sorted()
+            val names = (userApps + systemApps).take(60)
+            if (names.isEmpty()) {
+                Pair(true, "لا يوجد تطبيق مثبت يطابق «$f».")
+            } else {
+                Pair(true, "عدد التطبيقات القابلة للفتح ${matched.size}. من أسمائها: ${names.joinToString("، ")}.")
+            }
+        } catch (e: Exception) {
+            Pair(false, "تعذر قراءة التطبيقات: ${e.localizedMessage ?: "خطأ غير معروف"}")
+        }
     }
 
     fun findApp(query: String): InstalledApp? {
@@ -526,7 +565,7 @@ class SystemCommander(private val context: Context) {
         setStealthMode()
         setVolumePercent(0)
         openDisplaySettings()
-        return Pair(true, "تم تفعيل وضع النوم: الهاتف صامت والوسائط مكتومة مع خفض الإضاءة.")
+        return Pair(true, "فعّلت وضع النوم: الهاتف صامت والوسائط مكتومة. فتحت لك إعدادات الشاشة لتخفض السطوع بنفسك.")
     }
 
     fun executeWorkRoutine(): Pair<Boolean, String> {
@@ -579,11 +618,11 @@ class SystemCommander(private val context: Context) {
 
         val memInfoAfter = ActivityManager.MemoryInfo()
         actManager?.getMemoryInfo(memInfoAfter)
-        val freedMb = ((memInfoAfter.availMem - memBefore.availMem) / (1024 * 1024)).coerceAtLeast(160)
+        val freedMb = ((memInfoAfter.availMem - memBefore.availMem) / (1024 * 1024)).coerceAtLeast(0)
 
         return Pair(
             true,
-            "تم تبريد الهاتف وتسريع النظام بنجاح: تم تفريغ ${freedMb} ميجابايت من الذاكرة العشوائية RAM، حرارة المعالج والبطارية حالياً $temp، واستخدام الرام الحالي: ${memAfter.second}."
+            "مسحت الملفات المؤقتة الخاصة بتطبيقي وطلبت من النظام تحرير الذاكرة. التغير الفعلي في الذاكرة المتاحة: $freedMb ميجابايت (قد يكون صفراً لأن أندرويد يدير الذاكرة بنفسه). استخدام الذاكرة الآن ${memAfter.second}، وحرارة البطارية $temp."
         )
     }
 
@@ -592,6 +631,7 @@ class SystemCommander(private val context: Context) {
      */
     fun closeBackgroundAppsAndFreeMemory(): Pair<Boolean, String> {
         val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val memBefore = ActivityManager.MemoryInfo().also { actManager?.getMemoryInfo(it) }
         var killedCount = 0
         try {
             val myPackage = context.packageName
@@ -623,9 +663,12 @@ class SystemCommander(private val context: Context) {
             context.startActivity(homeIntent)
         } catch (_: Exception) {}
 
+        val memAfter = ActivityManager.MemoryInfo().also { actManager?.getMemoryInfo(it) }
+        val deltaMb = ((memAfter.availMem - memBefore.availMem) / (1024 * 1024)).coerceAtLeast(0)
         return Pair(
             true,
-            "أبشر يا غالي، أغلقت التطبيقات التي تعمل في الخلفية ونظفت الذاكرة عشان هاتفك يرجع خفيف وسريع. هل تطلب مني شيء آخر؟"
+            "طلبت من النظام إنهاء العمليات الخلفية لـ $killedCount تطبيقاً وعدت بك للشاشة الرئيسية. " +
+                "التغير الفعلي في الذاكرة المتاحة $deltaMb ميجابايت؛ أندرويد هو من يقرر ما يُنهى فعلاً، وقد تعود بعض التطبيقات للعمل تلقائياً."
         )
     }
 
@@ -634,7 +677,7 @@ class SystemCommander(private val context: Context) {
         setStealthMode()
         setVolumePercent(15)
         openDisplaySettings()
-        return Pair(true, "تم تفعيل وضع توفير الطاقة: أطفأت الفلاش، خفضت الصوت للحد الأدنى، مع خفض السطوع لحفظ البطارية.")
+        return Pair(true, "فعّلت وضع توفير الطاقة: أطفأت الفلاش وخفضت الصوت. فتحت لك إعدادات الشاشة لتخفض السطوع بنفسك.")
     }
 
     fun setStealthMode(): Pair<Boolean, String> {
@@ -818,10 +861,7 @@ class SystemCommander(private val context: Context) {
             e.printStackTrace()
         }
 
-        // Add built-in or cached files if empty (ensuring user always has testable files)
-        if (files.isEmpty()) {
-            files.addAll(getSimulatedOrCacheFiles(query, category))
-        }
+        // لا نضيف ملفات وهمية أبداً: إن لم يوجد شيء تُعاد قائمة فارغة بصدق.
 
         return files
     }
@@ -845,23 +885,6 @@ class SystemCommander(private val context: Context) {
         return if (mb >= 1.0) String.format(Locale.ROOT, "%.1f MB", mb) else String.format(Locale.ROOT, "%.0f KB", kb)
     }
 
-    private fun getSimulatedOrCacheFiles(query: String, category: FileCategory): List<DeviceFile> {
-        val cacheFiles = mutableListOf<DeviceFile>()
-        val defaultFiles = listOf(
-            DeviceFile(101, "عقد_واتفاقية_العمل.pdf", "/storage/emulated/0/Download/عقد_واتفاقية_العمل.pdf", 4520000, "4.3 MB", System.currentTimeMillis() - 86400000, "application/pdf", FileCategory.PDF),
-            DeviceFile(102, "دليل_المستخدم_الشامل.pdf", "/storage/emulated/0/Documents/دليل_المستخدم_الشامل.pdf", 2150000, "2.1 MB", System.currentTimeMillis() - 172800000, "application/pdf", FileCategory.PDF),
-            DeviceFile(103, "تقرير_الحسابات_المالية.docx", "/storage/emulated/0/Documents/تقرير_الحسابات_المالية.docx", 850000, "850 KB", System.currentTimeMillis() - 3600000, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", FileCategory.DOCUMENTS),
-            DeviceFile(104, "تصميم_واجهة_المشروع.png", "/storage/emulated/0/Pictures/تصميم_واجهة_المشروع.png", 3200000, "3.1 MB", System.currentTimeMillis() - 18000000, "image/png", FileCategory.MEDIA),
-            DeviceFile(105, "تسجيل_صوتي_شخصي.wav", "/storage/emulated/0/Music/تسجيل_صوتي_شخصي.wav", 1200000, "1.1 MB", System.currentTimeMillis() - 90000000, "audio/wav", FileCategory.AUDIO),
-            DeviceFile(106, "تحديث_تطبيق_كورتكس.apk", "/storage/emulated/0/Download/تحديث_تطبيق_كورتكس.apk", 18500000, "17.6 MB", System.currentTimeMillis() - 432000000, "application/vnd.android.package-archive", FileCategory.DOWNLOADS)
-        )
-
-        return defaultFiles.filter {
-            (category == FileCategory.ALL || it.category == category) &&
-            (query.isBlank() || it.name.contains(query, ignoreCase = true))
-        }
-    }
-
     fun openFile(file: DeviceFile) {
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -883,22 +906,35 @@ class SystemCommander(private val context: Context) {
     /**
      * قراءة وتلخيص ملفات الـ PDF بالهاتف وفتحها صوتياً
      */
-    fun readAndSummarizePdf(targetName: String, query: String = ""): Pair<Boolean, String> {
-        val files = searchDeviceFiles(targetName, FileCategory.PDF)
-        val selectedFile = files.firstOrNull() ?: searchDeviceFiles("", FileCategory.PDF).firstOrNull()
+    suspend fun readAndSummarizePdf(targetName: String, query: String = ""): Pair<Boolean, String> {
+        val files = withContext(Dispatchers.IO) { searchDeviceFiles(targetName, FileCategory.PDF) }
+        val selected = files.firstOrNull()
+            ?: return Pair(
+                false,
+                "لم أجد ملف PDF بهذا الاسم في ملفات هاتفك. قد يلزم منح التطبيق إذن الوصول إلى الملفات."
+            )
 
-        return if (selectedFile != null) {
-            openFile(selectedFile)
-            val summary = when {
-                selectedFile.name.contains("عقد") -> "الملف يحتوي على بنود عقد واتفاقية العمل، الشروط والأحكام، والدفعات المالية المعتمدة."
-                selectedFile.name.contains("دليل") -> "الملف هو دليل الإرشادات والتشغيل، ويوضح خطوات الاستخدام والتشغيل السريع."
-                selectedFile.name.contains("تقرير") || selectedFile.name.contains("حسابات") -> "الملف يتضمن التقرير المالي الشامل، الإيرادات والمصروفات وصافي الأرباح."
-                else -> "الملف عبارة عن وثيقة PDF بحجم ${selectedFile.formattedSize} تم فتحها وتلخيص أهم نقاطها بنجاح."
+        openFile(selected)
+
+        val bytes = withContext(Dispatchers.IO) {
+            try {
+                val f = File(selected.path)
+                if (f.exists() && f.length() in 1..(15L * 1024 * 1024)) f.readBytes() else null
+            } catch (_: Exception) {
+                null
             }
-            Pair(true, "أبشر يا غالي، فتحت لك ملف «${selectedFile.name}» وقرأت محتواه: $summary هل تأمرني بشيء آخر؟")
-        } else {
-            Pair(false, "بحثت في ملفات هاتفك ولم أعثر على ملف PDF بهذا الاسم، هل تحب أن تبحث باسم آخر؟")
-        }
+        } ?: return Pair(
+            true,
+            "فتحت الملف «${selected.name}» لكنني لم أستطع قراءة محتواه لتلخيصه (قد يكون كبيراً جداً أو غير متاح لي)."
+        )
+
+        val summary = com.example.ai.HybridAiBrain.summarizePdf(bytes, query)
+            ?: return Pair(
+                true,
+                "فتحت الملف «${selected.name}» لكن تعذر تلخيصه الآن. تحقق من الإنترنت وأعد المحاولة."
+            )
+
+        return Pair(true, "فتحت «${selected.name}». ملخص محتواه: $summary")
     }
 
     /**
@@ -914,11 +950,12 @@ class SystemCommander(private val context: Context) {
                 }
             }
             context.startActivity(intent)
-            val cameraLabel = if (facing.equals("front", ignoreCase = true)) "بالكاميرا الأمامية" else "بالكاميرا"
-            Pair(true, "أبشر يا غالي، جهزت لك الكاميرا $cameraLabel والتقطت لك الصورة فوراً. هل تطلب مني شيء آخر؟")
+            val cameraLabel = if (facing.equals("front", ignoreCase = true)) "الأمامية" else "الخلفية"
+            Pair(true, "فتحت الكاميرا $cameraLabel. لم تُلتقط الصورة بعد، اضغط زر الالتقاط.")
         } catch (e: Exception) {
-            openCamera()
-            Pair(true, "أبشر يا غالي، فتحت لك الكاميرا لالتقاط الصورة فوراً.")
+            val (opened, _) = openCamera()
+            if (opened) Pair(true, "فتحت تطبيق الكاميرا. لم تُلتقط الصورة بعد، اضغط زر الالتقاط.")
+            else Pair(false, "تعذر فتح الكاميرا: ${e.localizedMessage ?: "خطأ غير معروف"}")
         }
     }
 
@@ -963,33 +1000,36 @@ class SystemCommander(private val context: Context) {
 
             Pair(
                 true,
-                "نعم يا عزيزي، أنا بخدمتك وفي عيوني! فتحت لك الواتساب وجهزت رسالتك لـ $cleanRecipient: \"$cleanMsg\". هل تطلب مني شيء آخر يا غالي؟"
+                "فتحت واتساب وجهزت الرسالة لـ $cleanRecipient: «$cleanMsg». لم تُرسل بعد، اختر جهة الاتصال إن طُلب منك ثم اضغط زر الإرسال."
             )
         } catch (e: Exception) {
             Pair(
                 false,
-                "أبشر، جهزت لك الرسالة لـ $cleanRecipient: \"$cleanMsg\" ولكن تعذر فتح تطبيق الواتساب، يرجى التأكد من تثبيته في جهازك."
+                "تعذر فتح واتساب، ولم يتم تجهيز أو إرسال أي رسالة. تأكد من أن التطبيق مثبت."
             )
         }
     }
 
     fun performDeepDeviceInspection(): Pair<Boolean, String> {
         return try {
-            val appsCount = getInstalledApps().size
-            val mem = getMemoryTelemetry()
             val battery = getBatteryTelemetry()
+            val mem = getMemoryTelemetry()
             val stat = StatFs(Environment.getDataDirectory().path)
-            val freeGb = (stat.availableBlocksLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
-            val totalGb = (stat.blockCountLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
-            val filesCount = searchDeviceFiles("", FileCategory.ALL).size
+            val gb = 1024.0 * 1024.0 * 1024.0
+            val freeGb = String.format(Locale.ROOT, "%.1f", stat.availableBytes / gb)
+            val totalGb = String.format(Locale.ROOT, "%.1f", stat.totalBytes / gb)
+            val userApps = getInstalledApps().count { !it.isSystemApp }
+            val chargingTxt = if (battery.second) "ويُشحن الآن" else "ولا يُشحن حالياً"
 
-            val report = "فحصت لك هاتفك فحصاً عميقاً يا غالي: نسبة البطارية ${battery.first}% وحرارتها ${battery.third} ${if (battery.second) "وجار الشحن" else ""}، الذاكرة العشوائية مستخدم منها ${mem.second}، ومساحة التخزين المتوفرة ${freeGb} جيجابايت من أصل ${totalGb} جيجابايت. مثبت به ${appsCount} تطبيقاً و${filesCount} ملفاً مفهرساً. كل شيء في جهازك يعمل بأعلى كفاءة وسلاسة تامة! هل تطلب مني شيء آخر؟"
-
-            Pair(true, report)
+            Pair(
+                true,
+                "قياسات جهازك الآن: البطارية ${battery.first}% $chargingTxt وحرارتها ${battery.third}. " +
+                    "الذاكرة العشوائية المستخدمة ${mem.second}. " +
+                    "المتاح في التخزين $freeGb جيجابايت من $totalGb. " +
+                    "عدد التطبيقات التي ثبّتّها أنت $userApps."
+            )
         } catch (e: Exception) {
-            val mem = getMemoryTelemetry()
-            val battery = getBatteryTelemetry()
-            Pair(true, "فحصت لك هاتفك: البطارية بنسبة ${battery.first}% وحرارتها ${battery.third}، والرام بنسبة ${mem.second} والنظام يعمل بحالة ممتازة ومستقرة. هل تطلب مني شيء آخر يا غالي؟")
+            Pair(false, "تعذر قراءة قياسات الجهاز: ${e.localizedMessage ?: "خطأ غير معروف"}")
         }
     }
 
@@ -997,46 +1037,56 @@ class SystemCommander(private val context: Context) {
      * فحص أمان التطبيقات والصلاحيات الحساسة
      */
     fun auditAppPermissionsAndSnoopers(): Pair<Boolean, String> {
-        val apps = getInstalledApps()
-        var sensitiveCount = 0
-        try {
-            for (app in apps) {
-                val pInfo = packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS)
-                val perms = pInfo.requestedPermissions ?: continue
-                val hasCamera = perms.contains(android.Manifest.permission.CAMERA)
-                val hasMic = perms.contains(android.Manifest.permission.RECORD_AUDIO)
-                val hasLoc = perms.contains(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                if (hasCamera || hasMic || hasLoc) {
-                    sensitiveCount++
-                }
-            }
-        } catch (_: Exception) {}
+        return try {
+            val userApps = getInstalledApps().filter { !it.isSystemApp }
+            var camera = 0
+            var mic = 0
+            var location = 0
+            val allThree = mutableListOf<String>()
 
-        val count = sensitiveCount.coerceAtLeast(3)
-        return Pair(
-            true,
-            "فحصت لك أمان وصلاحيات الهاتف يا غالي: تم فحص ${apps.size} تطبيقاً مثبتاً، ووجدنا $count تطبيقات لديها صلاحيات الوصول الحساسة (الكاميرا أو الميكروفون أو الموقع). جميعها تطبيقات موثوقة ونظام هاتفك آمن ومحمي بالكامل! هل تطلب مني شيء آخر؟"
-        )
+            for (app in userApps) {
+                val hasCam = packageManager.checkPermission(Manifest.permission.CAMERA, app.packageName) == PackageManager.PERMISSION_GRANTED
+                val hasMic = packageManager.checkPermission(Manifest.permission.RECORD_AUDIO, app.packageName) == PackageManager.PERMISSION_GRANTED
+                val hasLoc = packageManager.checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, app.packageName) == PackageManager.PERMISSION_GRANTED
+                if (hasCam) camera++
+                if (hasMic) mic++
+                if (hasLoc) location++
+                if (hasCam && hasMic && hasLoc) allThree += app.appName
+            }
+
+            val triple = if (allThree.isEmpty()) {
+                "لا يوجد تطبيق ممنوح الثلاثة معاً."
+            } else {
+                "التطبيقات الممنوحة الثلاثة معاً: ${allThree.take(5).joinToString("، ")}" +
+                    (if (allThree.size > 5) " وغيرها." else ".")
+            }
+
+            Pair(
+                true,
+                "فحصت ${userApps.size} تطبيقاً ثبّتّه أنت. الممنوح لها فعلياً الآن: الكاميرا $camera تطبيق، " +
+                    "الميكروفون $mic، الموقع الدقيق $location. $triple " +
+                    "هذه أرقام أذونات ممنوحة فقط، ولا تثبت وجود تطبيق خبيث أو سلامة جميع التطبيقات؛ " +
+                    "راجع الأذونات من إعدادات التطبيقات وأزل ما لا تحتاجه."
+            )
+        } catch (e: Exception) {
+            Pair(false, "تعذر فحص الأذونات: ${e.localizedMessage ?: "خطأ غير معروف"}")
+        }
     }
 
     /**
      * طرد قطرات الماء والغبار من فتحات السماعات ومكبر الصوت بنبضات صوتية 165Hz
      */
     fun ejectWaterAndDustWithAcousticPulse(): Pair<Boolean, String> {
-        try {
+        return try {
             val sampleRate = 44100
             val durationSeconds = 3
             val numSamples = durationSeconds * sampleRate
-            val sample = DoubleArray(numSamples)
             val generatedSnd = ByteArray(2 * numSamples)
             val freqOfTone = 165.0
 
-            for (i in 0 until numSamples) {
-                sample[i] = kotlin.math.sin(2.0 * kotlin.math.PI * i / (sampleRate / freqOfTone))
-            }
-
             var idx = 0
-            for (dVal in sample) {
+            for (i in 0 until numSamples) {
+                val dVal = kotlin.math.sin(2.0 * kotlin.math.PI * i / (sampleRate / freqOfTone))
                 val valShort = (dVal * 32767).toInt().toShort()
                 generatedSnd[idx++] = (valShort.toInt() and 0x00ff).toByte()
                 generatedSnd[idx++] = ((valShort.toInt() and 0xff00) ushr 8).toByte()
@@ -1053,85 +1103,239 @@ class SystemCommander(private val context: Context) {
             )
             audioTrack.write(generatedSnd, 0, generatedSnd.size)
             audioTrack.play()
-        } catch (_: Exception) {}
 
-        return Pair(
-            true,
-            "أبشر يا غالي، أطلقت نبضات الموجات الصوتية بتردد 165 هرتز لطرد قطرات الماء والغبار وتنظيف فتحات السماعة ومكبر الصوت بالكامل. هل تأمرني بشيء آخر؟"
-        )
+            // تحرير الموارد بعد انتهاء النغمة
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    audioTrack.stop()
+                    audioTrack.release()
+                } catch (_: Exception) {}
+            }, (durationSeconds * 1000L) + 300L)
+
+            Pair(
+                true,
+                "شغّلت نغمة 165 هرتز لمدة 3 ثوانٍ عبر مكبر الصوت. قد تساعد على دفع قطرات الماء خارج فتحة السماعة، " +
+                    "لكنها لا تضمن إخراج الماء أو الغبار بالكامل. ارفع صوت الوسائط لنتيجة أفضل، وكرّرها عند الحاجة، وجفّف الهاتف."
+            )
+        } catch (e: Exception) {
+            Pair(false, "تعذر تشغيل النغمة: ${e.localizedMessage ?: "خطأ غير معروف"}")
+        }
     }
 
     /**
      * فحص وتنظيف ملفات التخزين الكبيرة والمؤقتة
      */
     fun scanAndCleanStorage(): Pair<Boolean, String> {
-        var clearedMb = 0L
-        try {
-            context.cacheDir.listFiles()?.forEach {
-                clearedMb += it.length()
-                it.deleteRecursively()
+        return try {
+            var freedBytes = 0L
+            val dirs = listOfNotNull(context.cacheDir, context.externalCacheDir)
+            for (dir in dirs) {
+                freedBytes += directorySize(dir)
+                dir.listFiles()?.forEach { it.deleteRecursively() }
             }
-        } catch (_: Exception) {}
-
-        val freed = ((clearedMb / (1024 * 1024)) + 240).coerceAtLeast(180)
-        return Pair(
-            true,
-            "فحصت لك وحدة التخزين ونظفت الملفات المؤقتة والمهملات: تم توفير ${freed} ميجابايت من مساحة الهاتف واستعادة سلاسة الذاكرة. هل تأمرني بشيء آخر؟"
-        )
+            val mb = String.format(Locale.ROOT, "%.1f", freedBytes / (1024.0 * 1024.0))
+            Pair(
+                true,
+                "مسحت الملفات المؤقتة الخاصة بتطبيق كورتكس فقط، والمساحة التي استعدتها فعلياً $mb ميجابايت. " +
+                    "أندرويد لا يسمح لأي تطبيق بمسح ملفات التطبيقات الأخرى؛ لتنظيف التخزين كاملاً استخدم إعدادات التخزين في هاتفك."
+            )
+        } catch (e: Exception) {
+            Pair(false, "تعذر تنظيف الملفات المؤقتة: ${e.localizedMessage ?: "خطأ غير معروف"}")
+        }
     }
+
+    private fun directorySize(file: File): Long =
+        if (file.isFile) file.length() else (file.listFiles()?.sumOf { directorySize(it) } ?: 0L)
 
     /**
      * معرفة موقع المستخدم الحالي بالخريطة والإحداثيات
      */
-    fun getCurrentGpsLocation(): Pair<Boolean, String> {
-        return try {
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
-            var bestLocation: android.location.Location? = null
+    // ------------------------------------------------------------------
+    // الموقع الحقيقي
+    // ------------------------------------------------------------------
+    sealed class LocationOutcome {
+        data class Found(
+            val lat: Double,
+            val lng: Double,
+            val accuracyM: Float,
+            val ageSec: Long,
+            val address: String
+        ) : LocationOutcome()
 
-            if (locationManager != null) {
-                val providers = locationManager.getProviders(true)
-                for (provider in providers) {
-                    @Suppress("MissingPermission")
-                    val l = try { locationManager.getLastKnownLocation(provider) } catch (_: Exception) { null }
-                    if (l != null && (bestLocation == null || l.accuracy < bestLocation.accuracy)) {
-                        bestLocation = l
-                    }
+        object PermissionMissing : LocationOutcome()
+        object ProvidersOff : LocationOutcome()
+        object TimedOut : LocationOutcome()
+    }
+
+    fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasFineLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    /** يطلب موقعاً جديداً من الأقمار الصناعية/الشبكة (وليس آخر موقع قديم). */
+    @SuppressLint("MissingPermission")
+    suspend fun getFreshLocation(timeoutMs: Long = 15_000L): LocationOutcome {
+        if (!hasLocationPermission()) return LocationOutcome.PermissionMissing
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return LocationOutcome.ProvidersOff
+
+        val candidates = buildList {
+            if (hasFineLocationPermission()) add(LocationManager.GPS_PROVIDER)
+            add(LocationManager.NETWORK_PROVIDER)
+        }
+        val enabled = candidates.filter { p ->
+            try { lm.isProviderEnabled(p) } catch (_: Exception) { false }
+        }
+        if (enabled.isEmpty()) return LocationOutcome.ProvidersOff
+
+        val fix = withTimeoutOrNull(timeoutMs) { requestSingleFix(lm, enabled) }
+            ?: recentLastKnown(lm, enabled, maxAgeMs = 2 * 60_000L)
+            ?: return LocationOutcome.TimedOut
+
+        val address = reverseGeocode(fix.latitude, fix.longitude)
+        val ageSec = ((System.currentTimeMillis() - fix.time) / 1000L).coerceAtLeast(0L)
+        return LocationOutcome.Found(
+            lat = fix.latitude,
+            lng = fix.longitude,
+            accuracyM = if (fix.hasAccuracy()) fix.accuracy else -1f,
+            ageSec = ageSec,
+            address = address
+        )
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun requestSingleFix(lm: LocationManager, providers: List<String>): Location? =
+        suspendCancellableCoroutine { cont ->
+            val signal = CancellationSignal()
+            val done = AtomicBoolean(false)
+            val legacyListeners = mutableListOf<LocationListener>()
+
+            fun cleanup() {
+                try { signal.cancel() } catch (_: Exception) {}
+                legacyListeners.forEach { l -> try { lm.removeUpdates(l) } catch (_: Exception) {} }
+            }
+
+            fun deliver(l: Location?) {
+                if (l != null && done.compareAndSet(false, true)) {
+                    cleanup()
+                    if (cont.isActive) cont.resume(l)
                 }
             }
 
-            if (bestLocation != null) {
-                var addressText = ""
+            cont.invokeOnCancellation { cleanup() }
+
+            providers.forEach { provider ->
                 try {
-                    val geocoder = android.location.Geocoder(context, Locale.forLanguageTag("ar"))
-                    @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocation(bestLocation.latitude, bestLocation.longitude, 1)
-                    if (!addresses.isNullOrEmpty()) {
-                        val addr = addresses[0]
-                        addressText = listOfNotNull(addr.thoroughfare, addr.subLocality, addr.locality, addr.countryName)
-                            .filter { it.isNotBlank() }
-                            .joinToString("، ")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        lm.getCurrentLocation(provider, signal, ContextCompat.getMainExecutor(context)) { loc -> deliver(loc) }
+                    } else {
+                        val listener = object : LocationListener {
+                            override fun onLocationChanged(location: Location) { deliver(location) }
+                            @Deprecated("Deprecated in Java")
+                            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                            override fun onProviderEnabled(provider: String) {}
+                            override fun onProviderDisabled(provider: String) {}
+                        }
+                        legacyListeners += listener
+                        @Suppress("DEPRECATION")
+                        lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
                     }
-                } catch (_: Exception) {}
-
-                val latStr = String.format(Locale.ROOT, "%.4f", bestLocation.latitude)
-                val lngStr = String.format(Locale.ROOT, "%.4f", bestLocation.longitude)
-                val locationDesc = if (addressText.isNotBlank()) addressText else "إحداثيات $latStr, $lngStr"
-
-                Pair(
-                    true,
-                    "أنت متواجد حالياً في: $locationDesc. موقعك على الخريطة محدد بدقة، هل تحب أن أدلك على أي طريق أو محل تريده من هنا؟"
-                )
-            } else {
-                Pair(
-                    true,
-                    "موقعك الجغرافي محدد ومتصل بالأقمار الصناعية GPS. قل لي اسم أي شارع أو محل تريده وسأدلك على الطريق فوراً."
-                )
+                } catch (_: Exception) {
+                    // مزود فشل: نتابع مع الباقي، وإن فشلوا جميعاً ينتهي الانتظار بالمهلة
+                }
             }
-        } catch (e: Exception) {
-            Pair(
-                true,
-                "موقعك متصل وجاهز للملاحة. اذكر لي اسم أي شارع أو محل تريده وسأفتح لك خط السير مباشرة."
-            )
+        }
+
+    @SuppressLint("MissingPermission")
+    private fun recentLastKnown(lm: LocationManager, providers: List<String>, maxAgeMs: Long): Location? {
+        val now = System.currentTimeMillis()
+        return providers
+            .mapNotNull { p -> try { lm.getLastKnownLocation(p) } catch (_: Exception) { null } }
+            .filter { now - it.time <= maxAgeMs }
+            .minByOrNull { if (it.hasAccuracy()) it.accuracy else Float.MAX_VALUE }
+    }
+
+    private suspend fun reverseGeocode(lat: Double, lng: Double): String = withContext(Dispatchers.IO) {
+        try {
+            if (!Geocoder.isPresent()) return@withContext ""
+            val geocoder = Geocoder(context, Locale.forLanguageTag("ar"))
+            val addresses: List<Address>? = withTimeoutOrNull(6_000L) {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    suspendCancellableCoroutine<List<Address>?> { c ->
+                        geocoder.getFromLocation(lat, lng, 1, object : Geocoder.GeocodeListener {
+                            override fun onGeocode(addresses: MutableList<Address>) {
+                                if (c.isActive) c.resume(addresses)
+                            }
+                            override fun onError(errorMessage: String?) {
+                                if (c.isActive) c.resume(null)
+                            }
+                        })
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocation(lat, lng, 1)
+                }
+            }
+            val addr = addresses?.firstOrNull() ?: return@withContext ""
+            listOfNotNull(addr.thoroughfare, addr.subLocality, addr.locality, addr.adminArea, addr.countryName)
+                .filter { it.isNotBlank() }
+                .distinct()
+                .joinToString("، ")
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun openMapAt(lat: Double, lng: Double): Boolean {
+        val label = Uri.encode("موقعي الحالي")
+        val geoUri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($label)")
+        val attempts = listOf(
+            Intent(Intent.ACTION_VIEW, geoUri).setPackage("com.google.android.apps.maps"),
+            Intent(Intent.ACTION_VIEW, geoUri),
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng"))
+        )
+        for (intent in attempts) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) { /* جرّب البديل التالي */ }
+        }
+        return false
+    }
+
+    /** يحدد موقع المستخدم فعلياً، يفتحه على الخريطة، ويعيد وصفاً صادقاً بما حدث. */
+    suspend fun showCurrentLocationOnMap(): Pair<Boolean, String> {
+        return when (val outcome = getFreshLocation()) {
+            is LocationOutcome.PermissionMissing ->
+                Pair(false, "لا أستطيع تحديد موقعك لأن إذن الموقع غير ممنوح للتطبيق.")
+
+            is LocationOutcome.ProvidersOff -> {
+                try {
+                    context.startActivity(
+                        Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (_: Exception) {}
+                Pair(false, "خدمة الموقع مطفأة في هاتفك. فتحت لك إعدادات الموقع لتشغيلها، ثم أعد الطلب.")
+            }
+
+            is LocationOutcome.TimedOut ->
+                Pair(false, "لم أحصل على إشارة موقع خلال خمس عشرة ثانية. جرّب الوقوف في مكان مفتوح ثم أعد الطلب.")
+
+            is LocationOutcome.Found -> {
+                val opened = openMapAt(outcome.lat, outcome.lng)
+                val where = if (outcome.address.isNotBlank()) {
+                    "أنت الآن في ${outcome.address}"
+                } else {
+                    "إحداثياتك ${String.format(Locale.ROOT, "%.5f", outcome.lat)} و${String.format(Locale.ROOT, "%.5f", outcome.lng)}"
+                }
+                val accuracy = if (outcome.accuracyM >= 0f) " بدقة تقارب ${outcome.accuracyM.roundToInt()} متراً" else ""
+                val age = if (outcome.ageSec > 60) "، علماً أنه آخر موقع مسجل قبل ${outcome.ageSec / 60} دقيقة" else ""
+                val map = if (opened) " وفتحت لك موقعك على الخريطة." else " لكن تعذر فتح تطبيق الخرائط."
+                Pair(true, "$where$accuracy$age.$map")
+            }
         }
     }
 
@@ -1139,43 +1343,28 @@ class SystemCommander(private val context: Context) {
      * الإرشاد والملاحة المباشرة إلى أي شارع أو محل أو عنوان على الخريطة
      */
     fun navigateToDestination(destination: String): Pair<Boolean, String> {
-        val cleanDest = destination.trim().ifBlank { "أقرب محطة أو طريق رئيسي" }
+        val cleanDest = destination.trim()
+        if (cleanDest.isBlank()) {
+            return Pair(false, "لم أسمع اسم الوجهة. قل مثلاً: خذني إلى مطار الملك خالد.")
+        }
         return try {
-            val gmmIntentUri = Uri.parse("google.navigation:q=" + Uri.encode(cleanDest))
-            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+            val navIntent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(cleanDest))).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 setPackage("com.google.android.apps.maps")
             }
-
-            val canLaunchGoogleMaps = mapIntent.resolveActivity(packageManager) != null
-            if (canLaunchGoogleMaps) {
-                context.startActivity(mapIntent)
+            if (navIntent.resolveActivity(packageManager) != null) {
+                context.startActivity(navIntent)
+                Pair(true, "فتحت خرائط جوجل للتوجيه إلى «$cleanDest». تأكد من الوجهة المعروضة على الشاشة قبل الانطلاق.")
             } else {
-                val webMapIntent = Intent(
+                val webIntent = Intent(
                     Intent.ACTION_VIEW,
                     Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(cleanDest))
-                ).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(webMapIntent)
+                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                context.startActivity(webIntent)
+                Pair(true, "تطبيق خرائط جوجل غير مثبت، فتحت نتائج البحث عن «$cleanDest» في المتصفح.")
             }
-
-            Pair(
-                true,
-                "أبشر يا غالي، حددت موقعك وجهزت لك خط السير المباشر والملاحة إلى «$cleanDest» على الخريطة، وانطلقت الملاحة الآن. هل تطلب مني شيء آخر؟"
-            )
         } catch (e: Exception) {
-            val webIntent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse("https://maps.google.com/?q=" + Uri.encode(cleanDest))
-            ).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(webIntent)
-            Pair(
-                true,
-                "أبشر، فتحت لك الخريطة ووجهتك إلى «$cleanDest» بأفضل مسار ممكن."
-            )
+            Pair(false, "تعذر فتح الخرائط: ${e.localizedMessage ?: "خطأ غير معروف"}")
         }
     }
 }

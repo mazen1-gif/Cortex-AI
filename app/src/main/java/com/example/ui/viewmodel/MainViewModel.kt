@@ -59,6 +59,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _systemSpeechRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val systemSpeechRequest: kotlinx.coroutines.flow.SharedFlow<Unit> = _systemSpeechRequest
 
+    // طلب إذن الموقع وقت التشغيل (كان غائباً تماماً قبل الإصلاح)
+    private val _locationPermissionRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val locationPermissionRequest: kotlinx.coroutines.flow.SharedFlow<Unit> = _locationPermissionRequest
+    private var pendingLocationAfterPermission = false
+
+    // يُضبط true عند فشل أي خطوة تنفيذ، حتى لا نعلن نجاحاً لم يحدث
+    @Volatile
+    private var execFailed = false
+
+    // أفعال رسالتها الصادقة تأتي من التنفيذ نفسه، لا من نص الرد الجاهز في المحلل
+    private val selfReportingActions = setOf(
+        ParsedAction.CLEAN_STORAGE, ParsedAction.AUDIT_SECURITY, ParsedAction.DEEP_DEVICE_SCAN,
+        ParsedAction.WATER_EJECT, ParsedAction.CURRENT_LOCATION, ParsedAction.NAVIGATE_TO,
+        ParsedAction.SEND_WHATSAPP, ParsedAction.CAPTURE_PHOTO, ParsedAction.READ_PDF,
+        ParsedAction.CLOSE_BACKGROUND_APPS, ParsedAction.ROUTINE_BOOST
+    )
+
     private val _isArabicVoice = MutableStateFlow(true)
     val isArabicVoice: StateFlow<Boolean> = _isArabicVoice.asStateFlow()
 
@@ -533,6 +550,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _lastSpokenTranscript.value = input
             _assistantState.value = AssistantState.PROCESSING
             log(LogLevel.INTENT, "أمر صوتي", "\"$input\"")
+            execFailed = false
 
             val intentResult = IntentParser.parse(input)
 
@@ -543,7 +561,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val summary = executeIntent(sub.action, sub.targetParameter, sub.secondaryParameter)
                     if (summary.isNotBlank()) summaries.add(summary)
                 }
-                val spokenMessage = if (_isArabicVoice.value) {
+                val spokenMessage = if (execFailed && summaries.isNotEmpty()) {
+                    summaries.joinToString("، ")
+                } else if (_isArabicVoice.value) {
                     "${intentResult.feedbackMessageAr}${if (summaries.isNotEmpty()) " (${summaries.joinToString("، ")})" else ""} هل تطلب مني شيء آخر يا غالي؟"
                 } else {
                     "${intentResult.feedbackMessageEn}${if (summaries.isNotEmpty()) " (${summaries.joinToString(", ")})" else ""} Anything else?"
@@ -555,7 +575,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else if (com.example.ai.HybridAiBrain.isLocalDeviceAction(intentResult.action)) {
                 _assistantState.value = AssistantState.EXECUTING
                 val executionSummary = executeIntent(intentResult.action, intentResult.targetParameter, intentResult.secondaryParameter)
-                val baseMsg = if (_isArabicVoice.value) {
+                val reportOnlyReality = execFailed || intentResult.action in selfReportingActions
+                val baseMsg = if (reportOnlyReality && executionSummary.isNotBlank()) {
+                    executionSummary
+                } else if (_isArabicVoice.value) {
                     if (executionSummary.isNotBlank()) "${intentResult.feedbackMessageAr} $executionSummary" else intentResult.feedbackMessageAr
                 } else {
                     if (executionSummary.isNotBlank()) "${intentResult.feedbackMessageEn} $executionSummary" else intentResult.feedbackMessageEn
@@ -569,7 +592,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 log(LogLevel.SUCCESS, "الرد المحلي", spokenMessage)
                 voiceEngine?.speak(spokenMessage, _isArabicVoice.value)
                 refreshTelemetry()
-            } else if (intentResult.action == ParsedAction.WEB_SEARCH) {
+            } else if (intentResult.action == ParsedAction.WEB_SEARCH &&
+                (com.example.ai.HybridAiBrain.isExplicitWebSearch(input) ||
+                    IntentParser.normalize(input).let { it.contains("ابحث") || it.contains("search") })
+            ) {
                 _assistantState.value = AssistantState.EXECUTING
                 val executionSummary = executeIntent(intentResult.action, intentResult.targetParameter, intentResult.secondaryParameter)
                 val spokenMessage = "${intentResult.feedbackMessageAr} $executionSummary"
@@ -578,7 +604,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 voiceEngine?.speak(spokenMessage, _isArabicVoice.value)
             } else {
                 // If there's an instant conversational response (e.g. math calculation, clock, date)
-                if (intentResult.feedbackMessageAr.isNotBlank() && !isBroadQuestion(input)) {
+                if (intentResult.feedbackMessageAr.isNotBlank() &&
+                    com.example.engine.ConversationalEngine.isInstantFactual(input, IntentParser.normalize(input))
+                ) {
                     _assistantState.value = AssistantState.EXECUTING
                     val baseMsg = intentResult.feedbackMessageAr
                     val spokenMessage = if (_isArabicVoice.value && !baseMsg.contains("هل تطلب") && !baseMsg.contains("هل تأمر") && !baseMsg.contains("شيء آخر")) {
@@ -595,8 +623,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _lastVoiceResponse.value = "لحظة من فضلك يا غالي، أجهز لك الرد..."
                     log(LogLevel.INFO, "المساعد الشخصي", "جاري مراجعة وتحليل طلبك...")
 
-                    val deviceCtx = "البطارية ${_batteryLevel.value}% ${if (_isCharging.value) "جار الشحن" else ""}، الحرارة ${_batteryTemp.value}"
-                    val geminiAnswer = com.example.ai.HybridAiBrain.generateAnswer(input, deviceCtx)
+                    val nowStr = SimpleDateFormat("EEEE d MMMM yyyy، h:mm a", Locale("ar")).format(Date())
+                    val deviceCtx = "الآن $nowStr، البطارية ${_batteryLevel.value}% ${if (_isCharging.value) "وتُشحن" else ""}، الحرارة ${_batteryTemp.value}"
+                    val outcome = com.example.ai.HybridAiBrain.runAgent(input, deviceCtx) { toolName, toolArgs ->
+                        executeToolCall(toolName, toolArgs)
+                    }
+                    val geminiAnswer = if (outcome.failed && intentResult.action == ParsedAction.WEB_SEARCH) {
+                        executeIntent(ParsedAction.WEB_SEARCH, intentResult.targetParameter.ifBlank { input }, "")
+                    } else if (outcome.failed && intentResult.feedbackMessageAr.isNotBlank()) {
+                        intentResult.feedbackMessageAr
+                    } else {
+                        outcome.text
+                    }
 
                     _assistantState.value = AssistantState.EXECUTING
                     _lastVoiceResponse.value = geminiAnswer
@@ -607,7 +645,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun executeIntent(action: ParsedAction, target: String, secondary: String = ""): String {
+    private suspend fun executeIntent(action: ParsedAction, target: String, secondary: String = ""): String {
         return when (action) {
             ParsedAction.OPEN_APP_SEARCH -> {
                 val (success, msg) = systemCommander.searchInApp(target, secondary)
@@ -868,9 +906,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 msg
             }
             ParsedAction.CURRENT_LOCATION -> {
-                val (success, msg) = systemCommander.getCurrentGpsLocation()
-                log(if (success) LogLevel.EXEC else LogLevel.WARN, "موقعي في الخريطة", msg)
-                msg
+                resolveAndShowLocation().second
             }
             ParsedAction.NAVIGATE_TO -> {
                 val (success, msg) = systemCommander.navigateToDestination(target)
@@ -880,6 +916,133 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ParsedAction.CONVERSATION_CHAT, ParsedAction.TALK_ASSISTANT, ParsedAction.UNKNOWN -> {
                 ""
             }
+        }
+    }
+
+    /**
+     * تحديد الموقع الحقيقي: يطلب الإذن إن لزم، ثم يجلب موقعاً جديداً ويفتحه على الخريطة.
+     * يعيد (نجح؟، رسالة صادقة).
+     */
+    private suspend fun resolveAndShowLocation(): Pair<Boolean, String> {
+        if (!systemCommander.hasLocationPermission()) {
+            pendingLocationAfterPermission = true
+            _locationPermissionRequest.tryEmit(Unit)
+            val msg = "أحتاج إذن الموقع أولاً. وافق عليه في النافذة التي ظهرت الآن وسأحدد موقعك فوراً."
+            log(LogLevel.WARN, "موقعي", msg)
+            return Pair(false, msg)
+        }
+        val result = systemCommander.showCurrentLocationOnMap()
+        log(if (result.first) LogLevel.EXEC else LogLevel.WARN, "موقعي في الخريطة", result.second)
+        return result
+    }
+
+    /** يُستدعى من MainActivity بعد أن يقرر المستخدم منح إذن الموقع أو رفضه. */
+    fun onLocationPermissionResult(granted: Boolean) {
+        val wasPending = pendingLocationAfterPermission
+        pendingLocationAfterPermission = false
+        viewModelScope.launch(Dispatchers.Main) {
+            if (!granted) {
+                val msg = "لم تمنح إذن الموقع، لذلك لا أستطيع تحديد مكانك. يمكنك منحه من إعدادات التطبيق."
+                log(LogLevel.WARN, "موقعي", msg)
+                _lastVoiceResponse.value = msg
+                voiceEngine?.speak(msg, _isArabicVoice.value)
+            } else if (wasPending) {
+                _assistantState.value = AssistantState.EXECUTING
+                val (_, msg) = resolveAndShowLocation()
+                _lastVoiceResponse.value = msg
+                voiceEngine?.speak(msg, _isArabicVoice.value)
+            }
+        }
+    }
+
+    /**
+     * تنفيذ حقيقي لأدوات المساعد الذكي (Function Calling).
+     * كل أداة تعيد نجاحاً/فشلاً فعلياً ورسالة صادقة، ويقرأها النموذج قبل صياغة ردّه.
+     */
+    private suspend fun executeToolCall(name: String, args: Map<String, String>): com.example.ai.HybridAiBrain.ToolResult {
+        fun arg(key: String) = args[key]?.trim().orEmpty()
+        fun done(pair: Pair<Boolean, String>, tag: String): com.example.ai.HybridAiBrain.ToolResult {
+            log(if (pair.first) LogLevel.EXEC else LogLevel.WARN, tag, pair.second)
+            return com.example.ai.HybridAiBrain.ToolResult(pair.first, pair.second)
+        }
+
+        return when (name) {
+            "open_app" -> done(systemCommander.launchApp(arg("app_name")), "فتح تطبيق")
+            "search_in_app" -> done(systemCommander.searchInApp(arg("app_name"), arg("query")), "بحث في التطبيق")
+            "navigate_to" -> done(systemCommander.navigateToDestination(arg("destination")), "الملاحة")
+            "show_my_location" -> {
+                val r = resolveAndShowLocation()
+                com.example.ai.HybridAiBrain.ToolResult(r.first, r.second)
+            }
+            "web_search" -> done(systemCommander.searchWeb(arg("query")), "بحث قوقل")
+            "send_whatsapp" -> done(systemCommander.sendWhatsAppMessage(arg("recipient"), arg("message")), "واتساب")
+            "set_flashlight" -> {
+                val r = systemCommander.toggleFlashlight(arg("on").equals("true", ignoreCase = true))
+                _isFlashlightActive.value = systemCommander.isFlashlightActive()
+                done(r, "كشاف الهاتف")
+            }
+            "adjust_volume" -> {
+                val dir = when (arg("direction").lowercase(Locale.ROOT)) {
+                    "up" -> 1
+                    "down" -> -1
+                    else -> 0
+                }
+                val r = systemCommander.adjustVolume(dir)
+                _volumePercent.value = systemCommander.getVolumeLevel()
+                done(r, "صوت الهاتف")
+            }
+            "open_wifi_settings" -> done(systemCommander.openWifiSettings(), "واي فاي")
+            "open_bluetooth_settings" -> done(systemCommander.openBluetoothSettings(), "بلوتوث")
+            "list_installed_apps" -> done(systemCommander.listInstalledAppNames(arg("filter")), "قائمة التطبيقات")
+            "read_notifications" -> {
+                val ctx = getApplication<Application>()
+                if (!com.example.service.SmartMessageResponderService.isNotificationAccessGranted(ctx)) {
+                    openNotificationSettings()
+                    val msg = "لا أملك إذن الوصول إلى الإشعارات. فتحت لك إعدادات الإشعارات؛ فعّل كورتكس هناك ثم أعد الطلب."
+                    log(LogLevel.WARN, "قراءة الإشعارات", msg)
+                    com.example.ai.HybridAiBrain.ToolResult(false, msg)
+                } else {
+                    val count = arg("count").toIntOrNull() ?: 5
+                    val (connected, items) = com.example.service.SmartMessageResponderService.readActiveNotifications(ctx, count, arg("app_name"))
+                    val msg = when {
+                        !connected -> "خدمة الإشعارات غير متصلة الآن. أعد تفعيل الإذن من الإعدادات ثم حاول مجدداً."
+                        items.isEmpty() -> "لا توجد إشعارات ظاهرة الآن" + (if (arg("app_name").isNotBlank()) " من ${arg("app_name")}." else ".")
+                        else -> items.mapIndexed { i, n ->
+                            "${i + 1}) من ${n.appName}: ${listOf(n.title, n.text).filter { it.isNotBlank() }.joinToString(" - ")}"
+                        }.joinToString("، ")
+                    }
+                    log(if (connected) LogLevel.EXEC else LogLevel.WARN, "قراءة الإشعارات", msg)
+                    com.example.ai.HybridAiBrain.ToolResult(connected, msg)
+                }
+            }
+            "battery_status" -> {
+                refreshTelemetry()
+                val msg = "البطارية ${_batteryLevel.value}% ${if (_isCharging.value) "وتُشحن الآن" else "ولا تُشحن حالياً"}، والحرارة ${_batteryTemp.value}."
+                log(LogLevel.INFO, "البطارية", msg)
+                com.example.ai.HybridAiBrain.ToolResult(true, msg)
+            }
+            "save_note" -> {
+                val text = arg("text")
+                if (text.isBlank()) {
+                    com.example.ai.HybridAiBrain.ToolResult(false, "نص الملاحظة فارغ، لم أحفظ شيئاً.")
+                } else {
+                    saveVoiceNote(text, NoteType.NOTE)
+                    com.example.ai.HybridAiBrain.ToolResult(true, "حفظت الملاحظة.")
+                }
+            }
+            "uninstall_app" -> done(systemCommander.uninstallApp(arg("app_name")), "حذف تطبيق")
+            "install_app" -> done(systemCommander.installAppInStore(arg("app_name")), "متجر التطبيقات")
+            "device_report" -> {
+                refreshTelemetry()
+                done(systemCommander.performDeepDeviceInspection(), "قياسات الجهاز")
+            }
+            "permissions_audit" -> done(systemCommander.auditAppPermissionsAndSnoopers(), "فحص الأذونات")
+            "clean_app_cache" -> {
+                val r = systemCommander.scanAndCleanStorage()
+                refreshTelemetry()
+                done(r, "تنظيف الملفات المؤقتة")
+            }
+            else -> com.example.ai.HybridAiBrain.ToolResult(false, "هذه الأداة غير متاحة لدي: $name")
         }
     }
 
@@ -942,6 +1105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun log(level: LogLevel, tag: String, message: String) {
+        if (level == LogLevel.WARN || level == LogLevel.ERROR) execFailed = true
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.ROOT)
         val timestamp = sdf.format(Date())
         val newLog = TerminalLog(
