@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+<<<<<<< HEAD
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Intent
@@ -13,6 +14,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+=======
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,7 +80,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.AssistantState
+<<<<<<< HEAD
 import com.example.service.FloatingOrbService
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
 import com.example.ui.components.CyberHudBar
 import com.example.ui.components.TerminalConsole
 import com.example.ui.components.VisualizerOrb
@@ -111,7 +120,10 @@ fun MainAssistantScreen(
     val batteryLevel by viewModel.batteryLevel.collectAsState()
     val isCharging by viewModel.isCharging.collectAsState()
     val isArabic by viewModel.isArabicVoice.collectAsState()
+<<<<<<< HEAD
     val isFloatingMicActive by viewModel.isFloatingOrbActive.collectAsState()
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     val voiceNotes by viewModel.voiceNotes.collectAsState()
     val expenses by viewModel.expenses.collectAsState()
     val showIntrudersDialog by viewModel.showIntrudersDialog.collectAsState()
@@ -127,6 +139,7 @@ fun MainAssistantScreen(
 
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
+<<<<<<< HEAD
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val overlayPermissionLauncher = rememberLauncherForActivityResult(
@@ -196,16 +209,23 @@ fun MainAssistantScreen(
             }
         }
     }
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
 
     Column(
         modifier = modifier
             .fillMaxSize()
+<<<<<<< HEAD
             .background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
                     listOf(Color(0xFF1C1814), CyberDarkBg, CyberDarkBg)
                 )
             )
             .padding(horizontal = 16.dp)
+=======
+            .background(CyberDarkBg)
+            .padding(horizontal = 14.dp)
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -256,14 +276,25 @@ fun MainAssistantScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
+<<<<<<< HEAD
                 .background(if (isListening) NeonMagenta else NeonCyan.copy(alpha = 0.12f))
                 .border(1.dp, if (isListening) NeonMagenta else NeonCyan.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
+=======
+                .background(if (isListening) NeonMagenta else NeonCyan.copy(alpha = 0.2f))
+                .border(2.dp, if (isListening) NeonMagenta else NeonCyan, RoundedCornerShape(24.dp))
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
                             onPressStart()
                             tryAwaitRelease()
                             onPressEnd()
+<<<<<<< HEAD
+=======
+                        },
+                        onTap = {
+                            onTriggerVoiceDialog()
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         }
                     )
                 }
@@ -284,11 +315,19 @@ fun MainAssistantScreen(
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = if (isListening) {
+<<<<<<< HEAD
                         if (isArabic) "استمر بالضغط وتحدث... (ارفع إصبعك للتنفيذ فوراً!)"
                         else "Hold down & speak... (Release to execute!)"
                     } else {
                         if (isArabic) "استمر بالضغط وتحدث (ارفع إصبعك للتنفيذ)"
                         else "Hold to Speak (Release to execute)"
+=======
+                        if (isArabic) "🔴 استمر بالضغط وتحدث... (ارفع إصبعك للتنفيذ فوراً!)"
+                        else "🔴 Hold down & speak... (Release to execute!)"
+                    } else {
+                        if (isArabic) "🎙️ استمر بالضغط وتحدث (ارفع إصبعك للتنفيذ)"
+                        else "🎙️ Hold to Speak (Release to execute)"
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                     },
                     fontFamily = OrbitronFontFamily,
                     fontSize = 12.sp,
@@ -300,6 +339,7 @@ fun MainAssistantScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+<<<<<<< HEAD
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -363,6 +403,8 @@ fun MainAssistantScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
         // Active listening notification banner with live instructions
         AnimatedVisibility(
             visible = isListening,
@@ -484,7 +526,11 @@ fun MainAssistantScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
+<<<<<<< HEAD
                                 text = "تنبيه أمني: تم التقاط صورة متلصص!",
+=======
+                                text = "🚨 تنبيه أمني: تم التقاط صورة متلصص!",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = OrbitronFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
@@ -1014,6 +1060,12 @@ fun MainAssistantScreen(
                                 onPressStart()
                                 tryAwaitRelease()
                                 onPressEnd()
+<<<<<<< HEAD
+=======
+                            },
+                            onTap = {
+                                onTriggerVoiceDialog()
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                             }
                         )
                     }

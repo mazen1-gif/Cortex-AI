@@ -321,7 +321,11 @@ fun FloatingOrbControllerCard(
                         .padding(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     Text(
+<<<<<<< HEAD
                         text = if (isArabic) "تحدث من أي شاشة" else "Speak Anywhere",
+=======
+                        text = if (isArabic) "✨ تحدث من أي شاشة" else "✨ Speak Anywhere",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = RajdhaniFontFamily,
                         fontSize = 11.sp,
                         color = NeonCyan
@@ -335,7 +339,11 @@ fun FloatingOrbControllerCard(
                         .padding(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     Text(
+<<<<<<< HEAD
                         text = if (isArabic) "اختصار الستارة العلوية" else "Quick Settings Tile",
+=======
+                        text = if (isArabic) "📲 اختصار الستارة العلوية" else "📲 Quick Settings Tile",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = RajdhaniFontFamily,
                         fontSize = 11.sp,
                         color = MatrixGreen
@@ -349,7 +357,11 @@ fun FloatingOrbControllerCard(
                         .padding(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     Text(
+<<<<<<< HEAD
                         text = if (isArabic) "تنفيذ فوري وبسيط" else "Instant Execution",
+=======
+                        text = if (isArabic) "⚡ تنفيذ فوري وبسيط" else "⚡ Instant Execution",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = RajdhaniFontFamily,
                         fontSize = 11.sp,
                         color = NeonYellow

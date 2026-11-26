@@ -274,14 +274,22 @@ fun VisualizerOrb(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
+<<<<<<< HEAD
                 text = if (isListening) "أسمعك" else "تحدث معي",
+=======
+                text = if (isListening) "أستمع لك..." else "تحدث معي",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                 fontFamily = OrbitronFontFamily,
                 fontSize = 15.sp,
                 color = if (isListening) NeonMagenta else HologramTextPrimary
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
+<<<<<<< HEAD
                 text = if (isListening) "ارفع إصبعك عندما تنتهي" else "اضغط باستمرار وتحدث",
+=======
+                text = if (isListening) "ارفع إصبعك للتنفيذ فوراً ⚡" else "استمر بالضغط وتحدث 🎙️",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                 fontFamily = RajdhaniFontFamily,
                 fontSize = 12.sp,
                 color = if (isListening) NeonMagenta else HologramTextMuted

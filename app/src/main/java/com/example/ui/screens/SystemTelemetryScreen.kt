@@ -431,7 +431,11 @@ fun SystemTelemetryScreen(
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
+<<<<<<< HEAD
                                     text = if (isCharging) (if (isArabic) "جارِ الشحن" else "CHARGING") else (if (isArabic) "على البطارية" else "BATTERY"),
+=======
+                                    text = if (isCharging) (if (isArabic) "⚡ جارِ الشحن" else "⚡ CHARGING") else (if (isArabic) "🔋 على البطارية" else "🔋 BATTERY"),
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                     fontFamily = RajdhaniFontFamily,
                                     fontSize = 11.sp,
                                     color = if (isCharging) MatrixGreen else HologramTextMuted
@@ -532,7 +536,11 @@ fun SystemTelemetryScreen(
                                 .testTag("test_full_charge_voice_button")
                         ) {
                             Text(
+<<<<<<< HEAD
                                 text = if (isArabic) "استمع لتنبيه اكتمال الشحن 100% (تجربة الصوت)" else "Play 100% Full Charge Voice Sample",
+=======
+                                text = if (isArabic) "🔊 استمع لتنبيه اكتمال الشحن 100% (تجربة الصوت)" else "🔊 Play 100% Full Charge Voice Sample",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = RajdhaniFontFamily,
                                 fontSize = 12.sp,
                                 color = MatrixGreen
@@ -598,7 +606,11 @@ fun SystemTelemetryScreen(
                                 .testTag("test_low_battery_voice_button")
                         ) {
                             Text(
+<<<<<<< HEAD
                                 text = if (isArabic) "تجربة إنذار البطارية أقل من 20% بصوت المساعد" else "Play <20% Low Battery Voice Alert",
+=======
+                                text = if (isArabic) "🔊 تجربة إنذار البطارية أقل من 20% بصوت المساعد" else "🔊 Play <20% Low Battery Voice Alert",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = RajdhaniFontFamily,
                                 fontSize = 12.sp,
                                 color = NeonMagenta
@@ -629,7 +641,11 @@ fun SystemTelemetryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
+<<<<<<< HEAD
                             text = if (isArabic) "تفعيل وضع توفير الطاقة الفائق (إطفاء الفلاش وخفض الصوت والسطوع)" else "Activate Super Power Saver Mode Now",
+=======
+                            text = if (isArabic) "⚡ تفعيل وضع توفير الطاقة الفائق (إطفاء الفلاش وخفض الصوت والسطوع)" else "⚡ Activate Super Power Saver Mode Now",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                             fontFamily = OrbitronFontFamily,
                             fontSize = 11.sp,
                             color = NeonYellow
@@ -733,7 +749,11 @@ fun SystemTelemetryScreen(
                             Column {
                                 Text(
                                     text = if (isNotificationAccessGranted) {
+<<<<<<< HEAD
                                         if (isArabic) "إذن قراءة إشعارات الرسائل: مفعل بنجاح" else "Notification Listener Access: GRANTED"
+=======
+                                        if (isArabic) "إذن قراءة إشعارات الرسائل: مفعل بنجاح ✓" else "Notification Listener Access: GRANTED ✓"
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                     } else {
                                         if (isArabic) "إذن قراءة الإشعارات: مطلوب للبدء" else "Notification Listener Access: REQUIRED"
                                     },
@@ -967,7 +987,11 @@ fun SystemTelemetryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
+<<<<<<< HEAD
                             text = if (isArabic) "تجربة نطق رسالة واردة وسؤال المساعد عن الرد" else "Test Incoming Message Voice Readout",
+=======
+                            text = if (isArabic) "🔊 تجربة نطق رسالة واردة وسؤال المساعد عن الرد" else "🔊 Test Incoming Message Voice Readout",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                             fontFamily = RajdhaniFontFamily,
                             fontSize = 12.sp,
                             color = NeonCyan
@@ -1066,9 +1090,15 @@ fun SystemTelemetryScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = when {
+<<<<<<< HEAD
                                     isAntiTheftArmed -> if (isArabic) "وضع الحماية نشط ومفعل" else "ANTI-THEFT GUARD: ARMED"
                                     isAntiTheftArmingCountdown -> if (isArabic) "⏳ جاري التفعيل خلال $antiTheftCountdownSeconds ثوانٍ..." else "⏳ ARMING IN $antiTheftCountdownSeconds SECONDS..."
                                     else -> if (isArabic) "وضع الحماية متوقف حالياً" else "ANTI-THEFT: DISARMED"
+=======
+                                    isAntiTheftArmed -> if (isArabic) "🛡️ وضع الحماية نشط ومفعل" else "🛡️ ANTI-THEFT GUARD: ARMED"
+                                    isAntiTheftArmingCountdown -> if (isArabic) "⏳ جاري التفعيل خلال $antiTheftCountdownSeconds ثوانٍ..." else "⏳ ARMING IN $antiTheftCountdownSeconds SECONDS..."
+                                    else -> if (isArabic) "⚠️ وضع الحماية متوقف حالياً" else "⚠️ ANTI-THEFT: DISARMED"
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 },
                                 fontFamily = OrbitronFontFamily,
                                 fontSize = 12.sp,
@@ -1344,7 +1374,11 @@ fun SystemTelemetryScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
+<<<<<<< HEAD
                                     text = if (isArabic) "شاشة القفل عند محاولة الدخول" else "INTRUDER LOCK OVERLAY",
+=======
+                                    text = if (isArabic) "شاشة القفل التام النيون (Intruder Lock Overlay)" else "INTRUDER LOCK OVERLAY",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                     fontFamily = OrbitronFontFamily,
                                     fontSize = 12.sp,
                                     color = HologramTextPrimary
@@ -1402,7 +1436,11 @@ fun SystemTelemetryScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
+<<<<<<< HEAD
                                     text = if (isArabic) "صور من حاول فتح هاتفك" else "INTRUDER SILENT SELFIE LOGS",
+=======
+                                    text = if (isArabic) "تصوير المتلصصين وسجل الحماية (Intruder Selfie)" else "INTRUDER SILENT SELFIE LOGS",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                     fontFamily = OrbitronFontFamily,
                                     fontSize = 12.sp,
                                     color = HologramTextPrimary
@@ -1454,7 +1492,11 @@ fun SystemTelemetryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
+<<<<<<< HEAD
                             text = if (isArabic) "تجربة إطلاق صفارة الإنذار وفلاش الكشاف والرمز" else "Test Full Siren, Strobe & Lock Screen Now",
+=======
+                            text = if (isArabic) "🚨 تجربة إطلاق صفارة الإنذار وفلاش الكشاف والرمز" else "🚨 Test Full Siren, Strobe & Lock Screen Now",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                             fontFamily = RajdhaniFontFamily,
                             fontSize = 12.sp,
                             color = NeonMagenta

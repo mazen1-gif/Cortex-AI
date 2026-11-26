@@ -20,7 +20,10 @@ import com.example.engine.SystemCommander
 import com.example.engine.VoiceEngine
 import com.example.security.AntiTheftManager
 import com.example.notes.VoiceNotesManager
+<<<<<<< HEAD
 import com.example.service.FloatingOrbService
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
 import com.example.model.AssistantState
 import com.example.model.CommandPrompt
 import com.example.model.CyberRoutine
@@ -54,7 +57,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSpokenTranscript = MutableStateFlow("")
     val lastSpokenTranscript: StateFlow<String> = _lastSpokenTranscript.asStateFlow()
 
+<<<<<<< HEAD
     private val _lastVoiceResponse = MutableStateFlow("حيا بيك يا خوي! أنا كورتكس مساعدك اليماني، اؤمرني بأي شيء تحتاجه وأبشر بسعدك.")
+=======
+    private val _lastVoiceResponse = MutableStateFlow("أهلاً بك! أنا مساعدك الصوتي، استمر بالضغط وتحدث معي بأي شيء تحتاجه.")
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     val lastVoiceResponse: StateFlow<String> = _lastVoiceResponse.asStateFlow()
 
     private val _systemSpeechRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -65,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val locationPermissionRequest: kotlinx.coroutines.flow.SharedFlow<Unit> = _locationPermissionRequest
     private var pendingLocationAfterPermission = false
 
+<<<<<<< HEAD
     // إذن الوسائط/الملفات ومنتقي PDF
     private val _storagePermissionRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val storagePermissionRequest: kotlinx.coroutines.flow.SharedFlow<Unit> = _storagePermissionRequest
@@ -82,6 +90,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val negativeWords = setOf("لا", "الغ", "الغي", "الغاء", "الغيها", "كنسل", "توقف", "no", "cancel", "stop")
     private var pendingPdfQuestion: String = ""
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     // يُضبط true عند فشل أي خطوة تنفيذ، حتى لا نعلن نجاحاً لم يحدث
     @Volatile
     private var execFailed = false
@@ -319,7 +329,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     // Floating Orb State
+<<<<<<< HEAD
     private val _isFloatingOrbActive = MutableStateFlow(FloatingOrbService.isServiceActive)
+=======
+    private val _isFloatingOrbActive = MutableStateFlow(false)
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     val isFloatingOrbActive: StateFlow<Boolean> = _isFloatingOrbActive.asStateFlow()
 
     fun setFloatingOrbActive(active: Boolean) {
@@ -570,6 +584,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             log(LogLevel.INTENT, "أمر صوتي", "\"$input\"")
             execFailed = false
 
+<<<<<<< HEAD
             val confirmationReply = consumeConfirmation(input)
             if (confirmationReply != null) {
                 _assistantState.value = AssistantState.EXECUTING
@@ -579,6 +594,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             val intentResult = IntentParser.parse(input)
 
             if (intentResult.subActions.isNotEmpty()) {
@@ -696,6 +713,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             ParsedAction.SEARCH_FILE -> {
                 _currentNavTab.value = 2 // Switch to Files tab
+<<<<<<< HEAD
                 if (!systemCommander.hasMediaPermission()) {
                     loadDeviceFiles(target) // يطلب الإذن
                     execFailed = true
@@ -704,6 +722,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     loadDeviceFiles(target)
                     "فتحت تبويب الملفات وبحثت عن «$target». النتائج على الشاشة، وهي تشمل الصور والفيديو والصوت فقط؛ مستندات PDF وWord لا يتيح أندرويد لأي تطبيق مسحها تلقائياً."
                 }
+=======
+                loadDeviceFiles(target)
+                "بحثت لك في ملفاتك عن: $target"
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             }
             ParsedAction.FLASHLIGHT_ON -> {
                 val (success, msg) = systemCommander.toggleFlashlight(true)
@@ -913,11 +935,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 msg
             }
             ParsedAction.READ_PDF -> {
+<<<<<<< HEAD
                 if (!systemCommander.canScanForPdfs()) {
                     pendingPdfQuestion = secondary
                     _pdfPickerRequest.tryEmit(Unit)
                     return "اختر ملف PDF من النافذة التي ظهرت الآن وسألخصه لك."
                 }
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                 val (success, msg) = systemCommander.readAndSummarizePdf(target, secondary)
                 log(if (success) LogLevel.EXEC else LogLevel.WARN, "قراءة PDF", msg)
                 msg
@@ -974,6 +999,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return result
     }
 
+<<<<<<< HEAD
     /** يُستدعى بعد قرار المستخدم بشأن إذن الوسائط والملفات. */
     fun onStoragePermissionResult(granted: Boolean) {
         val pending = pendingFileReload
@@ -1010,6 +1036,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     /** يُستدعى من MainActivity بعد أن يقرر المستخدم منح إذن الموقع أو رفضه. */
     fun onLocationPermissionResult(granted: Boolean) {
         val wasPending = pendingLocationAfterPermission
@@ -1030,6 +1058,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+<<<<<<< HEAD
      * إن كان هناك فعل ينتظر التأكيد: "نعم" تنفذه، "لا" تلغيه، وأي كلام آخر يلغيه بصمت
      * ويُعالج كأمر جديد. ينتهي التأكيد بعد 60 ثانية.
      */
@@ -1080,6 +1109,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
      * تنفيذ حقيقي لأدوات المساعد الذكي (Function Calling).
      * كل أداة تعيد نجاحاً/فشلاً فعلياً ورسالة صادقة، ويقرأها النموذج قبل صياغة ردّه.
      */
@@ -1117,6 +1148,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             "open_wifi_settings" -> done(systemCommander.openWifiSettings(), "واي فاي")
             "open_bluetooth_settings" -> done(systemCommander.openBluetoothSettings(), "بلوتوث")
+<<<<<<< HEAD
             "read_screen" -> {
                 val svc = com.example.service.CortexAccessibilityService.instance ?: return accessibilityMissingResult()
                 val items = svc.readScreenText()
@@ -1221,6 +1253,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _pdfPickerRequest.tryEmit(Unit)
                 com.example.ai.HybridAiBrain.ToolResult(true, "اختر ملف PDF من النافذة التي ظهرت الآن وسألخصه لك.")
             }
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             "list_installed_apps" -> done(systemCommander.listInstalledAppNames(arg("filter")), "قائمة التطبيقات")
             "read_notifications" -> {
                 val ctx = getApplication<Application>()
@@ -1293,6 +1327,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+<<<<<<< HEAD
     fun mediaPermissionsToRequest(): Array<String> = systemCommander.mediaPermissionsToRequest()
 
     fun loadDeviceFiles(query: String = "", category: FileCategory = _selectedFileCategory.value) {
@@ -1302,6 +1337,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _storagePermissionRequest.tryEmit(Unit)
             return
         }
+=======
+    fun loadDeviceFiles(query: String = "", category: FileCategory = _selectedFileCategory.value) {
+        _selectedFileCategory.value = category
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
         viewModelScope.launch(Dispatchers.IO) {
             val files = systemCommander.searchDeviceFiles(query, category)
             _deviceFiles.value = files

@@ -138,7 +138,11 @@ fun AntiTheftAlarmOverlay(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
+<<<<<<< HEAD
                     text = "إنذار أمني: رصد سرقة!",
+=======
+                    text = "🚨 إنذار أمني: رصد سرقة!",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                     fontFamily = OrbitronFontFamily,
                     fontSize = 22.sp,
                     color = NeonMagenta
@@ -192,7 +196,11 @@ fun AntiTheftAlarmOverlay(
                 if (isPinError) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
+<<<<<<< HEAD
                         text = if (wrongAttemptCount >= 2) "تم التقاط صورة المتلصص بالكاميرا وسُجلت!" else "رمز الأمان خاطئ! حاول مجدداً",
+=======
+                        text = if (wrongAttemptCount >= 2) "🚨 تم التقاط صورة المتلصص بالكاميرا وسُجلت!" else "رمز الأمان خاطئ! حاول مجدداً",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = OrbitronFontFamily,
                         fontSize = 11.sp,
                         color = NeonMagenta

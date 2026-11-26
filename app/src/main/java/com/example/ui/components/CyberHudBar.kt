@@ -45,10 +45,17 @@ fun CyberHudBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
+<<<<<<< HEAD
             .clip(RoundedCornerShape(16.dp))
             .background(CyberSurface.copy(alpha = 0.92f))
             .border(1.dp, CyberSurfaceBorder, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp, vertical = 10.dp),
+=======
+            .clip(RoundedCornerShape(12.dp))
+            .background(CyberSurface.copy(alpha = 0.85f))
+            .border(1.dp, CyberSurfaceBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -58,13 +65,21 @@ fun CyberHudBar(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(RoundedCornerShape(4.dp))
+<<<<<<< HEAD
                     .background(NeonCyan)
+=======
+                    .background(MatrixGreen)
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = if (isArabic) "رفيقك" else "CORTEX",
                 fontFamily = OrbitronFontFamily,
+<<<<<<< HEAD
                 fontSize = 18.sp,
+=======
+                fontSize = 15.sp,
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = HologramTextPrimary
             )
@@ -93,7 +108,11 @@ fun CyberHudBar(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
+<<<<<<< HEAD
                     text = if (isArabic) "العربية" else "English",
+=======
+                    text = if (isArabic) "العربية" else "ENGLISH",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                     fontFamily = OrbitronFontFamily,
                     fontSize = 10.sp,
                     color = HologramTextPrimary

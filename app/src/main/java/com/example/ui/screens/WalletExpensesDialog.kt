@@ -351,8 +351,13 @@ fun WalletExpensesDialog(
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
+<<<<<<< HEAD
                         text = if (isArabic) "يمكنك القول في أي وقت: «سجل صرفت 500 ريال تسوق» أو «حط 100 بنزين» أو «كم صرفت اليوم؟»"
                         else "Say anytime: 'Record 500 shopping' or 'Put 100 fuel' or 'How much spent today?'",
+=======
+                        text = if (isArabic) "💡 يمكنك القول في أي وقت: «سجل صرفت 500 ريال تسوق» أو «حط 100 بنزين» أو «كم صرفت اليوم؟»"
+                        else "💡 Say anytime: 'Record 500 shopping' or 'Put 100 fuel' or 'How much spent today?'",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = RajdhaniFontFamily,
                         fontSize = 11.sp,
                         color = HologramTextSecondary,

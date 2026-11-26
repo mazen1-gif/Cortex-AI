@@ -149,6 +149,7 @@ fun CyberpunkAssistantApp(
         }
     }
 
+<<<<<<< HEAD
     // Media/Files permission + PDF picker (يُطلبان فقط عند الحاجة)
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -172,6 +173,8 @@ fun CyberpunkAssistantApp(
         }
     }
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     // System Voice Recognition Dialog Launcher
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

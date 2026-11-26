@@ -200,7 +200,11 @@ fun VoiceNotesDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
+<<<<<<< HEAD
                                 text = if (isArabic) "قراءة الملاحظات بصوتك" else "Read Out Loud",
+=======
+                                text = if (isArabic) "🔊 قراءة الملاحظات بصوتك" else "🔊 Read Out Loud",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = RajdhaniFontFamily,
                                 fontSize = 11.sp,
                                 color = NeonCyan
@@ -227,7 +231,11 @@ fun VoiceNotesDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
+<<<<<<< HEAD
                                 text = if (isArabic) "إضافة تدوينة" else "New Note",
+=======
+                                text = if (isArabic) "➕ إضافة تدوينة" else "➕ New Note",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = RajdhaniFontFamily,
                                 fontSize = 11.sp,
                                 color = MatrixGreen
@@ -279,9 +287,15 @@ fun VoiceNotesDialog(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             listOf(
+<<<<<<< HEAD
                                 Triple(NoteType.NOTE, "ملاحظة", NeonCyan),
                                 Triple(NoteType.IDEA, "فكرة", NeonYellow),
                                 Triple(NoteType.TASK, "مهمة", NeonMagenta)
+=======
+                                Triple(NoteType.NOTE, "📝 ملاحظة", NeonCyan),
+                                Triple(NoteType.IDEA, "💡 فكرة", NeonYellow),
+                                Triple(NoteType.TASK, "⚡ مهمة", NeonMagenta)
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                             ).forEach { (type, label, color) ->
                                 val isSelected = newNoteType == type
                                 Box(
@@ -346,7 +360,11 @@ fun VoiceNotesDialog(
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
+<<<<<<< HEAD
                         title = "ملاحظات",
+=======
+                        title = "ملاحظات 📝",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         isSelected = selectedFilter == NoteType.NOTE && !showOnlyToday,
                         onClick = {
                             selectedFilter = NoteType.NOTE
@@ -355,7 +373,11 @@ fun VoiceNotesDialog(
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
+<<<<<<< HEAD
                         title = "أفكار",
+=======
+                        title = "أفكار 💡",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         isSelected = selectedFilter == NoteType.IDEA && !showOnlyToday,
                         onClick = {
                             selectedFilter = NoteType.IDEA
@@ -364,7 +386,11 @@ fun VoiceNotesDialog(
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
+<<<<<<< HEAD
                         title = "مهام",
+=======
+                        title = "مهام ⚡",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         isSelected = selectedFilter == NoteType.TASK && !showOnlyToday,
                         onClick = {
                             selectedFilter = NoteType.TASK
@@ -373,7 +399,11 @@ fun VoiceNotesDialog(
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
+<<<<<<< HEAD
                         title = "اليوم",
+=======
+                        title = "اليوم 📅",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         isSelected = showOnlyToday,
                         onClick = { showOnlyToday = !showOnlyToday },
                         modifier = Modifier.weight(1f)
@@ -395,7 +425,11 @@ fun VoiceNotesDialog(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
+<<<<<<< HEAD
                                 text = "لا توجد ملاحظات في هذا التصنيف",
+=======
+                                text = "📝 لا توجد ملاحظات في هذا التصنيف",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                                 fontFamily = OrbitronFontFamily,
                                 fontSize = 13.sp,
                                 color = HologramTextMuted

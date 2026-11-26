@@ -84,7 +84,11 @@ fun TerminalConsole(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
+<<<<<<< HEAD
                     text = "آخر ما حدث",
+=======
+                    text = "سجل النشاط والمتابعة",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                     fontFamily = OrbitronFontFamily,
                     fontSize = 12.sp,
                     color = NeonCyan
@@ -139,7 +143,11 @@ fun TerminalConsole(
             if (logs.isEmpty()) {
                 item {
                     Text(
+<<<<<<< HEAD
                         text = "لا شيء بعد. اضغط زر التحدث وقل ما تريد.",
+=======
+                        text = "لا توجد أنشطة سابقة، اضغط على زر التحدث وأخبرني بما تحتاجه...",
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
                         fontFamily = RajdhaniFontFamily,
                         fontSize = 13.sp,
                         color = HologramTextMuted,

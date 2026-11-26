@@ -795,6 +795,7 @@ class SystemCommander(private val context: Context) {
     }
 
     // File Management & Search
+<<<<<<< HEAD
     // ---- صلاحيات الوسائط والملفات
     fun mediaPermissionsToRequest(): Array<String> =
         if (Build.VERSION.SDK_INT >= 33) {
@@ -852,6 +853,8 @@ class SystemCommander(private val context: Context) {
         }
     }
 
+=======
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
     fun searchDeviceFiles(query: String = "", category: FileCategory = FileCategory.ALL): List<DeviceFile> {
         val files = mutableListOf<DeviceFile>()
         val projection = arrayOf(
@@ -871,6 +874,7 @@ class SystemCommander(private val context: Context) {
             selectionBuilder.append("${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?")
             selectionArgs.add("%$query%")
         }
+<<<<<<< HEAD
         if (category == FileCategory.PDF) {
             if (selectionBuilder.isNotEmpty()) selectionBuilder.append(" AND ")
             selectionBuilder.append("${MediaStore.Files.FileColumns.MIME_TYPE} = ?")
@@ -883,6 +887,16 @@ class SystemCommander(private val context: Context) {
                 projection,
                 if (selectionBuilder.isNotEmpty()) selectionBuilder.toString() else null,
                 if (selectionArgs.isNotEmpty()) selectionArgs.toTypedArray() else null
+=======
+
+        try {
+            val cursor = context.contentResolver.query(
+                uri,
+                projection,
+                if (selectionBuilder.isNotEmpty()) selectionBuilder.toString() else null,
+                if (selectionArgs.isNotEmpty()) selectionArgs.toTypedArray() else null,
+                "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT 50"
+>>>>>>> 9460234707315938c64498f8c919e664a97d06b9
             )
 
             cursor?.use {
